@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Pagina {
+  id              String        @id @default(cuid())
+  dominio         String        @unique
+  urlOriginal     String
+  titulo          String?
+  domainAgeDays   Int?
+  plataforma      String?
+  tecnologias     String[]
+  pais            String?
+  idioma          String?
+  urlScreenshot   String?
+  linksExternos   Int?
+  totalRequests   Int?
+  scoreEscala     Float         @default(0)
+  status          PaginaStatus  @default(ATIVA)
+  criadoEm        DateTime      @default(now())
+  atualizadoEm    DateTime      @updatedAt
+  scans           Scan[]
+  ofertas         Oferta[]
+  historico       HistoricoScore[]
+}
+
+model Scan {
+  id          String      @id @default(cuid())
+  uuid        String      @unique
+  url         String
+  paginaId    String?
+  taskMethod  String?
+  resultado   Json?
+  screenshot  String?
+  domSnapshot String?
+  linksJson   Json?
+  techJson    Json?
+  status      ScanStatus  @default(PENDENTE)
+  criadoEm    DateTime    @default(now())
+  pagina      Pagina?     @relation(fields: [paginaId], references: [id])
+}
+
+model Oferta {
+  id           String         @id @default(cuid())
+  nome         String
+  descricao    String?
+  categoria    CategoriaOferta
+  subcategoria String?
+  urlOferta    String
+  urlImagem    String?
+  preco        Float?
+  modelo       ModeloNegocio
+  plataforma   String?        // Hotmart, Shopify, Stripe, etc.
+  paginaId     String
+  score        Float          @default(0)
+  tendencia    Tendencia      @default(NEUTRO)
+  adsCounts    Int            @default(0)
+  sinais       Json           // Detalhamento dos sinais detectados
+  primeiraVez  DateTime       @default(now())
+  atualizadoEm DateTime       @updatedAt
+  pagina       Pagina         @relation(fields: [paginaId], references: [id])
+  historico    HistoricoScore[]
+  alertas      Alerta[]
+}
+
+model HistoricoScore {
+  id        String   @id @default(cuid())
+  paginaId  String?
+  ofertaId  String?
+  score     Float
+  sinais    Json
+  criadoEm  DateTime @default(now())
+  pagina    Pagina?  @relation(fields: [paginaId], references: [id])
+  oferta    Oferta?  @relation(fields: [ofertaId], references: [id])
+}
+
+model Alerta {
+  id        String     @id @default(cuid())
+  tipo      AlertaTipo
+  ofertaId  String?
+  mensagem  String
+  metadata  Json?
+  lido      Boolean    @default(false)
+  criadoEm  DateTime   @default(now())
+  oferta    Oferta?    @relation(fields: [ofertaId], references: [id])
+}
+
+model TendenciaNicho {
+  id          String   @id @default(cuid())
+  keyword     String
+  categoria   CategoriaOferta?
+  crescimento Float    // % de crescimento no período
+  volume      Int
+  periodo     String   // "7d", "30d", "90d"
+  fonte       String   // "google_trends", "ads_library"
+  criadoEm    DateTime @default(now())
+}
+
+enum PaginaStatus {
+  ATIVA
+  INATIVA
+  SUSPEITA
+}
+
+enum ScanStatus {
+  PENDENTE
+  PROCESSANDO
+  CONCLUIDO
+  ERRO
+}
+
+enum Tendencia {
+  SUBINDO
+  NEUTRO
+  CAINDO
+}
+
+enum ModeloNegocio {
+  ECOMMERCE
+  INFOPRODUTO
+  SAAS
+  SERVICO
+  AFILIADO
+  ASSINATURA
+  EVENTO
+  OUTRO
+}
+
+enum AlertaTipo {
+  NOVA_OFERTA
+  SCORE_ALTO
+  TENDENCIA_ALTA
+  PAGINA_NOVA
+  LANCAMENTO_DETECTADO
+}
+
+enum CategoriaOferta {
+  ECOMMERCE_FISICO
+  ECOMMERCE_DIGITAL
+  CURSO_ONLINE
+  MENTORIA
+  EBOOK
+  COMUNIDADE
+  SAAS_B2B
+  SAAS_B2C
+  SERVICO_AGENCIA
+  SERVICO_FREELANCE
+  AFILIADO
+  ASSINATURA_CONTEUDO
+  EVENTO_WEBINAR
+  OUTRO
+}
