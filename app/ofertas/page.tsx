@@ -1,13 +1,12 @@
-import { prisma } from '@/packages/database/src';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+
+export const dynamic = 'force-dynamic';
 
 export default async function OfertasPage() {
-  const ofertas = await prisma.oferta.findMany({
-    take: 50,
-    orderBy: { score: 'desc' },
-    include: { pagina: true },
-  });
+  const ofertas = await fetchQuery(api.ofertas.list, { limit: 50 });
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -32,9 +31,9 @@ export default async function OfertasPage() {
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
                 {ofertas.map((oferta) => (
-                  <tr key={oferta.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <tr key={oferta._id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td className="p-4 align-middle font-medium">
-                      <Link href={`/ofertas/${oferta.id}`} className="hover:underline">
+                      <Link href={`/ofertas/${oferta._id}`} className="hover:underline">
                         {oferta.nome}
                       </Link>
                     </td>

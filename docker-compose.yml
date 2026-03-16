@@ -1,19 +1,6 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: mineracao_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - mineracao-net
-
   redis:
     image: redis:7-alpine
     ports:
@@ -26,11 +13,12 @@ services:
       context: .
       dockerfile: Dockerfile.worker
     environment:
-      - DATABASE_URL=postgresql://user:password@postgres:5432/mineracao_db
       - REDIS_URL=redis://redis:6379
       - URLSCAN_API_KEY=${URLSCAN_API_KEY}
+      - NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL}
+      - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-3}
+      - DISCOVERY_INTERVAL_HOURS=${DISCOVERY_INTERVAL_HOURS:-6}
     depends_on:
-      - postgres
       - redis
     networks:
       - mineracao-net
@@ -41,6 +29,7 @@ services:
       dockerfile: Dockerfile.scheduler
     environment:
       - REDIS_URL=redis://redis:6379
+      - DISCOVERY_INTERVAL_HOURS=${DISCOVERY_INTERVAL_HOURS:-6}
     depends_on:
       - worker
     networks:
@@ -53,16 +42,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://user:password@postgres:5432/mineracao_db
-      - REDIS_URL=redis://redis:6379
+      - NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL}
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
     depends_on:
-      - postgres
       - redis
     networks:
       - mineracao-net
-
-volumes:
-  postgres_data:
 
 networks:
   mineracao-net:

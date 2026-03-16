@@ -1,24 +1,21 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/packages/database/src';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = parseInt(searchParams.get('limit') || '10', 10);
-  const skip = (page - 1) * limit;
 
   try {
-    const paginas = await prisma.pagina.findMany({
-      skip,
-      take: limit,
-      orderBy: { criadoEm: 'desc' },
-      include: { ofertas: true },
-    });
-
-    const total = await prisma.pagina.count();
+    // Use paginas list with basic pagination
+    const all = await fetchQuery(api.paginas.list, { limit: 1000 });
+    const total = all.length;
+    const start = (page - 1) * limit;
+    const data = all.slice(start, start + limit);
 
     return NextResponse.json({
-      data: paginas,
+      data,
       meta: {
         total,
         page,

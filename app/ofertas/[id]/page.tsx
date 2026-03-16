@@ -1,14 +1,15 @@
-import { prisma } from '@/packages/database/src';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
+
+export const dynamic = 'force-dynamic';
 
 export default async function OfertaDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const oferta = await prisma.oferta.findUnique({
-    where: { id },
-    include: { pagina: true, historico: { orderBy: { criadoEm: 'asc' } } },
-  });
+  const oferta = await fetchQuery(api.ofertas.getById, { id: id as Id<"ofertas"> });
 
   if (!oferta) {
     notFound();
@@ -53,11 +54,11 @@ export default async function OfertaDetalhePage({ params }: { params: Promise<{ 
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm">
-              {Object.entries(sinais).map(([key, value]) => (
+              {sinais && Object.entries(sinais).map(([key, value]: [string, any]) => (
                 <li key={key} className="flex justify-between border-b pb-2">
                   <span className="font-medium">{key.replace(/_/g, ' ')}</span>
                   <span className="text-muted-foreground">
-                    Valor: {String(value.valor)} | Peso: {value.peso}
+                    Valor: {String(value?.valor)} | Peso: {value?.peso}
                   </span>
                 </li>
               ))}

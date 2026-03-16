@@ -1,12 +1,11 @@
-import { prisma } from '@/packages/database/src';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { format } from 'date-fns';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+
+export const dynamic = 'force-dynamic';
 
 export default async function TendenciasPage() {
-  const tendencias = await prisma.tendenciaNicho.findMany({
-    take: 50,
-    orderBy: { crescimento: 'desc' },
-  });
+  const tendencias = await fetchQuery(api.tendencias.list, { limit: 50 });
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -32,7 +31,7 @@ export default async function TendenciasPage() {
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
                 {tendencias.map((tendencia) => (
-                  <tr key={tendencia.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <tr key={tendencia._id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td className="p-4 align-middle font-medium">{tendencia.keyword}</td>
                     <td className="p-4 align-middle">{tendencia.categoria || '-'}</td>
                     <td className="p-4 align-middle text-emerald-500">+{tendencia.crescimento.toFixed(1)}%</td>

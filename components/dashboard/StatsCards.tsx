@@ -1,22 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { prisma } from '@/packages/database/src';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
 
 export async function StatsCards() {
-  const totalOfertas = await prisma.oferta.count();
-  const novasHoje = await prisma.oferta.count({
-    where: {
-      criadoEm: {
-        gte: new Date(new Date().setHours(0, 0, 0, 0)),
-      },
-    },
-  });
-  const scoreMedioResult = await prisma.oferta.aggregate({
-    _avg: { score: true },
-  });
-  const scoreMedio = scoreMedioResult._avg.score || 0;
-  const alertasNaoLidos = await prisma.alerta.count({
-    where: { lido: false },
-  });
+  const totalOfertas = await fetchQuery(api.ofertas.count);
+  const novasHoje = await fetchQuery(api.ofertas.countToday);
+  const scoreMedio = await fetchQuery(api.ofertas.averageScore);
+  const alertasNaoLidos = await fetchQuery(api.alertas.countUnread);
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

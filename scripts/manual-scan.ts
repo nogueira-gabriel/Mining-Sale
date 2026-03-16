@@ -12,6 +12,9 @@ const run = async () => {
     console.log(JSON.stringify(result.results, null, 2));
   } catch (error: any) {
     logger.error(`Error: ${error.message}`);
+    if (error.response) {
+      console.error(JSON.stringify(error.response.data, null, 2));
+    }
   }
 };
 

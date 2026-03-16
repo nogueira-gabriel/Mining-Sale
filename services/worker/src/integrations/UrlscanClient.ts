@@ -18,10 +18,10 @@ export class UrlscanClient {
   static queries = {
     // E-commerce
     lojasShopifyNovasBR: () =>
-      'content.technologies:Shopify AND page.country:BR AND page.apexDomainAgeDays:<60',
+      'domain:myshopify.com AND page.country:BR AND page.apexDomainAgeDays:<60',
 
     lojasWooNovasBR: () =>
-      'content.technologies:WooCommerce AND page.country:BR AND page.apexDomainAgeDays:<60',
+      'page.url:checkout AND page.country:BR AND page.apexDomainAgeDays:<60',
 
     // Infoprodutos — plataformas brasileiras
     paginasHotmart: () =>
@@ -52,9 +52,9 @@ export class UrlscanClient {
     dominiosRecemCriados: () =>
       'page.apexDomainAgeDays:<30 AND page.country:BR AND links.length:>20',
 
-    // Por tecnologia e país
+    // Por tecnologia e país (using generic search since content.technologies is Pro)
     porTecnologia: (tech: string, country = 'BR') =>
-      `content.technologies:${tech} AND page.country:${country}`,
+      `"${tech}" AND page.country:${country}`,
   };
 
   async search(query: string, size: number = 100): Promise<UrlscanSearchResult> {

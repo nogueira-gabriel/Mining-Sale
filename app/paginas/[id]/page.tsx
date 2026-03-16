@@ -1,15 +1,15 @@
-import { prisma } from '@/packages/database/src';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { format } from 'date-fns';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
+
+export const dynamic = 'force-dynamic';
 
 export default async function PaginaDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const pagina = await prisma.pagina.findUnique({
-    where: { id },
-    include: { ofertas: true, scans: { orderBy: { criadoEm: 'desc' } } },
-  });
+  const pagina = await fetchQuery(api.paginas.getWithOfertas, { id: id as Id<"paginas"> });
 
   if (!pagina) {
     notFound();
@@ -66,8 +66,8 @@ export default async function PaginaDetalhePage({ params }: { params: Promise<{ 
             {pagina.ofertas.length > 0 ? (
               <ul className="space-y-2 text-sm">
                 {pagina.ofertas.map((oferta) => (
-                  <li key={oferta.id} className="flex justify-between border-b pb-2">
-                    <Link href={`/ofertas/${oferta.id}`} className="font-medium hover:underline">
+                  <li key={oferta._id} className="flex justify-between border-b pb-2">
+                    <Link href={`/ofertas/${oferta._id}`} className="font-medium hover:underline">
                       {oferta.nome}
                     </Link>
                     <span className="text-muted-foreground">
@@ -88,7 +88,7 @@ export default async function PaginaDetalhePage({ params }: { params: Promise<{ 
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {pagina.tecnologias.map((tech) => (
+            {pagina.tecnologias.map((tech: string) => (
               <span key={tech} className="inline-flex items-center rounded-md bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
                 {tech}
               </span>
