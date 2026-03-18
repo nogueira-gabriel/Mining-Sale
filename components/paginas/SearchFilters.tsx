@@ -20,7 +20,7 @@ import { useState } from "react";
 import { Search, Loader2 } from "lucide-react";
 
 export type SearchParams = {
-  dominio: string;
+  query: string;
   idadeIdx: string;
   pais: string;
   dataRecente: string;
@@ -34,7 +34,7 @@ interface SearchFiltersProps {
 
 export function SearchFilters({ onSearch, isLoading }: SearchFiltersProps) {
   const [params, setParams] = useState<SearchParams>({
-    dominio: "",
+    query: "",
     idadeIdx: "0", // index em FAIXAS_IDADE
     pais: "ALL",
     dataRecente: "",
@@ -49,18 +49,24 @@ export function SearchFilters({ onSearch, isLoading }: SearchFiltersProps) {
   return (
     <form onSubmit={handleSearch} className="flex flex-col gap-4 p-4 rounded-lg border border-border bg-card text-card-foreground shadow-sm">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {/* Dominio Base */}
+        {/* Busca livre */}
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="dominio">Domínio / Plataforma</Label>
+          <Label htmlFor="query">Busca</Label>
           <div className="flex w-full items-center space-x-2">
             <Input
-              id="dominio"
-              placeholder="Ex: myshopify.com, hotmart.com"
-              value={params.dominio}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setParams({ ...params, dominio: e.target.value })}
+              id="query"
+              placeholder='Ex: utmify.com.br  •  myshopify.com  •  page.title:"checkout"'
+              value={params.query}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setParams({ ...params, query: e.target.value })}
               required
             />
           </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Digite um domínio, subdomínio, ou use campos do urlscan como{" "}
+            <code className="bg-muted px-1 rounded">page.title:palavra</code>,{" "}
+            <code className="bg-muted px-1 rounded">ip:1.2.3.4</code>,{" "}
+            <code className="bg-muted px-1 rounded">page.server:nginx</code>
+          </p>
         </div>
 
         {/* Idade do domínio */}
@@ -144,7 +150,7 @@ export function SearchFilters({ onSearch, isLoading }: SearchFiltersProps) {
           </Select>
         </div>
 
-        <Button type="submit" disabled={isLoading || !params.dominio.trim()} className="w-full md:w-auto px-8">
+        <Button type="submit" disabled={isLoading || !params.query.trim()} className="w-full md:w-auto px-8">
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

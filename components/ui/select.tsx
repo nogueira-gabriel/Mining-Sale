@@ -78,16 +78,16 @@ const SelectContent = ({ children, className }: any) => {
 
 const SelectItem = ({ children, value, ...props }: any) => {
   const context = React.useContext(SelectContext);
-  if (!context) return null;
-
-  const isSelected = context.value === value;
+  const isSelected = context?.value === value;
 
   // Sync label on mount if selected
   React.useEffect(() => {
-    if (isSelected) {
+    if (context && isSelected) {
       context.setSelectedLabel(String(children));
     }
-  }, [isSelected, children]);
+  }, [context, isSelected, children]);
+
+  if (!context) return null;
 
   return (
     <div

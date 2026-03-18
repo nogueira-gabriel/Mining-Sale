@@ -3,152 +3,113 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 
-/**
- * Busca interativa na API do urlscan.io.
- *
- * O usuário digita um domínio base (ex: myshopify.com) e aplica filtros.
- * A action monta a query Elasticsearch, consulta a API em tempo real,
- * e devolve os resultados formatados para o frontend.
- */
 export const searchUrlscan = action({
   args: {
-    dominio: v.string(),
+    query:        v.string(),
     idadeMinDias: v.optional(v.number()),
     idadeMaxDias: v.optional(v.number()),
-    pais: v.optional(v.string()),
-    dataRecente: v.optional(v.string()), // ex: "7d", "30d", "90d", "365d"
-    size: v.optional(v.number()),
-    searchAfter: v.optional(v.array(v.any())),
+    pais:         v.optional(v.string()),
+    dataRecente:  v.optional(v.string()),
+    size:         v.optional(v.number()),
+    searchAfter:  v.optional(v.array(v.any())),
   },
   handler: async (_ctx, args) => {
     const apiKey = process.env.URLSCAN_API_KEY;
-    if (!apiKey) {
-      throw new Error("URLSCAN_API_KEY não configurada. Configure via: npx convex env set URLSCAN_API_KEY <chave>");
-    }
+    if (!apiKey) throw new Error("URLSCAN_API_KEY não configurada.");
 
-    const dominio = args.dominio.trim().toLowerCase();
-    if (!dominio) {
-      throw new Error("Domínio é obrigatório");
-    }
+    const termo = args.query.trim();
+    if (!termo) throw new Error("Query é obrigatória.");
 
-    // ── Montagem da query Elasticsearch ──────────────────────────
-    const queryParts: string[] = [];
+    // ── Monta a query ──────────────────────────────────────────────
+    const partes: string[] = [];
 
-    // Busca pelo domínio base
-    // Não usamos wildcard no início (*termo) pois a maioria das chaves urlscan não permite.
-    // Usamos o termo direto, o que no Elasticsearch já faz uma busca por 'term'.
-    if (!dominio.includes(".")) {
-      queryParts.push(`${dominio}`);
+    // Se o usuário digitou um campo explícito (tem ":"), passa direto
+    // Ex: page.title:"curso", ip:1.2.3.4, page.server:nginx
+    if (termo.includes(":")) {
+      partes.push(termo);
     } else {
-      queryParts.push(`page.domain:${dominio}`);
+      // Busca de domínio livre:
+      // O campo `domain` (sem page.) captura QUALQUER domínio ou subdomínio
+      // que apareceu durante o scan — tanto o domínio principal quanto
+      // recursos externos. Isso garante que utmify.com.br encontre
+      // app.utmify.com.br, www.utmify.com.br, etc.
+      //
+      // Usamos também page.domain para pegar scans onde o domínio
+      // digitado É o domínio principal da página.
+      partes.push(`(domain:${termo} OR page.domain:${termo})`);
     }
 
-    // Filtro de idade do domínio (Elasticsearch range syntax)
-    if (args.idadeMinDias !== undefined || args.idadeMaxDias !== undefined) {
-      const min = args.idadeMinDias ?? "*";
-      const max = args.idadeMaxDias ?? "*";
-      queryParts.push(`page.apexDomainAgeDays:[${min} TO ${max}]`);
+    // Filtro de idade — page.apexDomainAgeDays é integer, usa range [min TO max]
+    // Nunca passar null — usar * para sem limite
+    const minIdade = args.idadeMinDias;
+    const maxIdade = args.idadeMaxDias;
+    if (minIdade !== undefined || maxIdade !== undefined) {
+      const min = minIdade !== undefined ? minIdade : "*";
+      const max = maxIdade !== undefined ? maxIdade : "*";
+      partes.push(`page.apexDomainAgeDays:[${min} TO ${max}]`);
     }
 
     // Filtro de país
     if (args.pais && args.pais !== "ALL") {
-      queryParts.push(`page.country:${args.pais}`);
+      partes.push(`page.country:${args.pais}`);
     }
 
-    // Filtro de data (scans recentes)
+    // Filtro de data do scan
     if (args.dataRecente) {
-      queryParts.push(`date:>now-${args.dataRecente}`);
+      partes.push(`date:>now-${args.dataRecente}`);
     }
 
-    const query = queryParts.join(" AND ");
-    // O limite da API pública para 'size' é 100. Valores maiores causam erro 400.
-    const rawSize = 100;
+    const queryFinal = partes.join(" AND ");
+    const tamanho = Math.min(args.size ?? 50, 100);
 
-    console.log(`[urlscan] Query: ${query} | RawSize: ${rawSize} | SearchAfter: ${args.searchAfter}`);
+    console.log(`[urlscan] Query: ${queryFinal}`);
 
-    // ── Requisição à API ─────────────────────────────────────────
-    let url = `https://urlscan.io/api/v1/search/?q=${encodeURIComponent(query)}&size=${rawSize}`;
-    
+    // ── Chama a API ────────────────────────────────────────────────
+    let url = `https://urlscan.io/api/v1/search/?q=${encodeURIComponent(queryFinal)}&size=${tamanho}`;
+
     if (args.searchAfter && args.searchAfter.length > 0) {
-      const saString = args.searchAfter.join(",");
-      url += `&search_after=${saString}`;
+      url += `&search_after=${args.searchAfter.join(",")}`;
     }
-
-    console.log(`[urlscan] Requesting URL: ${url}`);
 
     const response = await fetch(url, {
-      headers: {
-        "API-Key": apiKey,
-        "Content-Type": "application/json",
-      },
+      headers: { "API-Key": apiKey, "Content-Type": "application/json" },
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[urlscan] Erro ${response.status}: ${errorText}`);
-      throw new Error(`urlscan.io retornou erro ${response.status}: ${errorText}`);
+      const err = await response.text();
+      throw new Error(`urlscan.io erro ${response.status}: ${err}`);
     }
 
     const data = await response.json();
-    const results = data.results ?? [];
+    const results: any[] = data.results ?? [];
 
-    console.log(`[urlscan] ${results.length} resultados encontrados para "${query}"`);
-
-    // ── Formatação dos resultados ────────────────────────────────
+    // ── Formata resultados ─────────────────────────────────────────
     const formatted = results.map((item: any) => ({
-      // Identificação
-      taskUuid: item.task?.uuid ?? null,
-      url: item.task?.url ?? "",
-      dominio: item.page?.domain ?? "",
-      titulo: item.page?.title ?? "",
-
-      // Dados de idade
-      domainAgeDays: item.page?.apexDomainAgeDays ?? null,
-
-      // Geolocalização
-      pais: item.page?.country ?? null,
-      servidor: item.page?.server ?? null,
-      ip: item.page?.ip ?? null,
-      asn: item.page?.asnname ?? null,
-
-      // Screenshot
-      screenshotUrl: item.screenshot ?? null,
-
-      // Estatísticas
-      uniqIPs: item.stats?.uniqIPs ?? 0,
-      totalLinks: item.stats?.totalLinks ?? 0,
-      requests: item.stats?.requests ?? 0,
-      dataBytes: item.stats?.dataLength ?? 0,
-
-      // Datas
-      dataAnalise: item.task?.time ?? null,
-
-      // Link direto para o resultado no urlscan.io
+      taskUuid:         item.task?.uuid ?? null,
+      url:              item.task?.url ?? "",
+      dominio:          item.page?.domain ?? "",
+      titulo:           item.page?.title ?? "",
+      domainAgeDays:    item.page?.apexDomainAgeDays ?? null,
+      pais:             item.page?.country ?? null,
+      servidor:         item.page?.server ?? null,
+      ip:               item.page?.ip ?? null,
+      asn:              item.page?.asnname ?? null,
+      screenshotUrl:    item.screenshot ?? null,
+      uniqIPs:          item.stats?.uniqIPs ?? 0,
+      totalRequests:    item.stats?.requests ?? 0,
+      dataAnalise:      item.task?.time ?? null,
       urlscanResultUrl: item.result ?? null,
-
-      // Token para paginação (search_after)
-      sortToken: item.sort ?? null,
+      sortToken:        item.sort ?? null,
     }));
 
-    // Deduplicar por domínio (manter apenas o scan mais recente de cada)
-    const deduplicado = new Map<string, (typeof formatted)[0]>();
-    for (const item of formatted) {
-      if (!deduplicado.has(item.dominio)) {
-        deduplicado.set(item.dominio, item);
-      }
-    }
-
-    // Pegar o token de ordenação do ÚLTIMO item da busca bruta (importante para paginação search_after)
-    const lastRawItem = results[results.length - 1];
-    const lastSortToken = lastRawItem?.sort ?? null;
+    const lastSortToken = results[results.length - 1]?.sort ?? null;
 
     return {
-      query,
-      total: data.total ?? results.length,
-      resultados: Array.from(deduplicado.values()),
+      query:         queryFinal,
+      total:         data.total ?? results.length,
+      resultados:    formatted,
       lastSortToken,
-      // Se voltaram resultados e a busca bruta foi até o limite, provavelmente tem mais.
-      hasMore: results.length === rawSize,
+      hasMore:       results.length === tamanho,
     };
   },
 });
