@@ -8,8 +8,8 @@ export async function GET(request: Request) {
   const limit = parseInt(searchParams.get('limit') || '10', 10);
 
   try {
-    const result = await fetchQuery(api.ofertas.listPaginated, { page, limit });
-    return NextResponse.json(result);
+    const ofertas = await fetchQuery(api.ofertas.list, { limit: 50 });
+    return NextResponse.json(ofertas);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

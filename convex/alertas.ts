@@ -1,89 +1,64 @@
-import { query } from "./_generated/server";
+import { internalMutation, query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
-export const list = query({
+export const criar = internalMutation({
   args: {
-    limit: v.optional(v.number()),
+    tipo: v.string(), ofertaId: v.optional(v.id("ofertas")),
+    mensagem: v.string(), metadata: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 100;
-    const alertas = await ctx.db
-      .query("alertas")
-      .order("desc")
-      .take(limit);
-
-    // Join with ofertas
-    const result = await Promise.all(
-      alertas.map(async (alerta) => {
-        const oferta = alerta.ofertaId
-          ? await ctx.db.get(alerta.ofertaId)
-          : null;
-        return { ...alerta, oferta };
-      })
-    );
-    return result;
+    await ctx.db.insert("alertas", { ...args, lido: false });
   },
 });
 
-export const listRecent = query({
-  args: {
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const limit = args.limit ?? 10;
-    return await ctx.db
-      .query("alertas")
-      .order("desc")
-      .take(limit);
-  },
-});
-
-export const countUnread = query({
+export const listarNaoLidos = query({
   args: {},
   handler: async (ctx) => {
-    const unread = await ctx.db
-      .query("alertas")
-      .withIndex("by_lido", (q) => q.eq("lido", false))
-      .collect();
-    return unread.length;
+    return await ctx.db.query("alertas").withIndex("by_lido", (q) => q.eq("lido", false)).order("desc").take(50);
   },
 });
 
-export const listPaginated = query({
-  args: {
-    page: v.optional(v.number()),
-    limit: v.optional(v.number()),
+export const marcarComoLido = mutation({
+  args: { id: v.id("alertas") },
+  handler: async (ctx, { id }) => {
+    await ctx.db.patch(id, { lido: true });
   },
+});
+
+export const list = query({
+  args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const page = args.page ?? 1;
-    const limit = args.limit ?? 10;
-    const all = await ctx.db
-      .query("alertas")
-      .order("desc")
-      .collect();
-
-    const total = all.length;
-    const start = (page - 1) * limit;
-    const data = all.slice(start, start + limit);
-
-    // Join with ofertas
-    const result = await Promise.all(
-      data.map(async (alerta) => {
-        const oferta = alerta.ofertaId
-          ? await ctx.db.get(alerta.ofertaId)
-          : null;
-        return { ...alerta, oferta };
+    const list = await ctx.db.query("alertas").order("desc").take(args.limit ?? 50);
+    return await Promise.all(
+      list.map(async (a) => {
+        let oferta = null;
+        if (a.ofertaId) oferta = await ctx.db.get(a.ofertaId);
+        return { ...a, oferta };
       })
     );
+  }
+});
 
-    return {
-      data: result,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
-  },
+export const unreadCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const l = await ctx.db.query("alertas").withIndex("by_lido", q => q.eq("lido", false)).collect();
+    return l.length;
+  }
+});
+
+export const countUnread = unreadCount;
+
+export const recent = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const r = await ctx.db.query("alertas").order("desc").take(args.limit ?? 5);
+    return await Promise.all(
+      r.map(async (a) => {
+        let oferta = null;
+        if (a.ofertaId) oferta = await ctx.db.get(a.ofertaId);
+        return { ...a, oferta };
+      })
+    );
+  }
 });

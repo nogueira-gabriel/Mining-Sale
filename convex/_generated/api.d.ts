@@ -9,9 +9,12 @@
  */
 
 import type * as alertas from "../alertas.js";
+import type * as crons from "../crons.js";
+import type * as jobs from "../jobs.js";
 import type * as mutations from "../mutations.js";
 import type * as ofertas from "../ofertas.js";
 import type * as paginas from "../paginas.js";
+import type * as search from "../search.js";
 import type * as tendencias from "../tendencias.js";
 
 import type {
@@ -22,9 +25,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   alertas: typeof alertas;
+  crons: typeof crons;
+  jobs: typeof jobs;
   mutations: typeof mutations;
   ofertas: typeof ofertas;
   paginas: typeof paginas;
+  search: typeof search;
   tendencias: typeof tendencias;
 }>;
 

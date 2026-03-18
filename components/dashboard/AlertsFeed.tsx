@@ -5,7 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export async function AlertsFeed() {
-  const alertas = await fetchQuery(api.alertas.listRecent, { limit: 10 });
+  const alertas = await fetchQuery(api.alertas.recent, { limit: 10 });
 
   return (
     <Card className="col-span-3">
@@ -14,7 +14,7 @@ export async function AlertsFeed() {
       </CardHeader>
       <CardContent>
         <div className="space-y-8">
-          {alertas.map((alerta) => (
+          {alertas.map((alerta: any) => (
             <div key={alerta._id} className="flex items-center">
               <div className="ml-4 space-y-1">
                 <p className="text-sm font-medium leading-none">{alerta.mensagem}</p>

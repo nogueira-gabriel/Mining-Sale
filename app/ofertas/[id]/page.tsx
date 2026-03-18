@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function OfertaDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const oferta = await fetchQuery(api.ofertas.getById, { id: id as Id<"ofertas"> });
+  const oferta = await fetchQuery(api.ofertas.detailWithJoins, { id: id as Id<"ofertas"> });
 
   if (!oferta) {
     notFound();

@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function PaginaDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const pagina = await fetchQuery(api.paginas.getWithOfertas, { id: id as Id<"paginas"> });
+  const pagina = await fetchQuery(api.paginas.detail, { id: id as Id<"paginas"> });
 
   if (!pagina) {
     notFound();
@@ -65,7 +65,7 @@ export default async function PaginaDetalhePage({ params }: { params: Promise<{ 
           <CardContent>
             {pagina.ofertas.length > 0 ? (
               <ul className="space-y-2 text-sm">
-                {pagina.ofertas.map((oferta) => (
+                {pagina.ofertas.map((oferta: any) => (
                   <li key={oferta._id} className="flex justify-between border-b pb-2">
                     <Link href={`/ofertas/${oferta._id}`} className="font-medium hover:underline">
                       {oferta.nome}

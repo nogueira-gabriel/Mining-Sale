@@ -55,7 +55,7 @@ export const createOferta = mutation({
     return await ctx.db.insert("ofertas", {
       nome: args.nome,
       categoria: args.categoria as any,
-      modelo: args.modelo as any,
+      modeloNegocio: args.modelo as any,
       plataforma: args.plataforma,
       urlOferta: args.urlOferta,
       urlImagem: args.urlImagem,
@@ -85,7 +85,7 @@ export const updateOfertaScore = mutation({
     });
 
     // Create history entry
-    await ctx.db.insert("historicoScores", {
+    await ctx.db.insert("historicoScore", {
       ofertaId: args.ofertaId,
       score: args.score,
       sinais: args.sinais,
@@ -135,8 +135,8 @@ export const getOfertaWithHistory = mutation({
     if (!oferta) return null;
 
     const historico = await ctx.db
-      .query("historicoScores")
-      .withIndex("by_ofertaId", (q) => q.eq("ofertaId", args.ofertaId))
+      .query("historicoScore")
+      .withIndex("by_oferta", (q) => q.eq("ofertaId", args.ofertaId))
       .order("desc")
       .take(1);
 

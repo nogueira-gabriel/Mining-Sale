@@ -8,8 +8,7 @@ import { api } from '@/convex/_generated/api';
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const categoryData = await fetchQuery(api.ofertas.categoryDistribution);
-  const trendData = await fetchQuery(api.ofertas.trendData);
+  const { byCategory: categoryData, byTrend: trendData } = await fetchQuery(api.ofertas.getAggregations);
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
